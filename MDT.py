@@ -21,13 +21,13 @@ if uploaded_file:
         return df.columns.tolist().index(col_name) if col_name in df.columns else 0
 
     sfc_col = st.selectbox("选择 SFC 列-SN", df.columns, index=get_default_index("SFC"))
-    desc_col = st.selectbox("选择 DESCRIPTION - Test Items列", [None] + df.columns.tolist(), index=(get_default_index("DESCRIPTION") + 1 if "DESCRIPTION" in df.columns else 0))
+    desc_col = st.selectbox("选择 MEASURE_NAME - Test Items列", [None] + df.columns.tolist(), index=(get_default_index("MEASURE_NAME") + 1 if "MEASURE_NAME" in df.columns else 0))
     actual_col = st.selectbox("选择 ACTUAL - 值 列", [None] + df.columns.tolist(), index=(get_default_index("ACTUAL") + 1 if "ACTUAL" in df.columns else 0))
     status_col = st.selectbox("选择 MEASURE_STATUS - PASS|FAIL😊 列", [None] + df.columns.tolist(), index=(get_default_index("MEASURE_STATUS") + 1 if "MEASURE_STATUS" in df.columns else 0))
     resource_col = st.selectbox("选择 RESOURCE - Station 列", [None] + df.columns.tolist(), index=(get_default_index("RESOURCE") + 1 if "RESOURCE" in df.columns else 0))
     date_col = st.selectbox("选择 TEST_DATE_TIME 列", [None] + df.columns.tolist(), index=(get_default_index("TEST_DATE_TIME") + 1 if "TEST_DATE_TIME" in df.columns else 0))
     part_number_col = st.selectbox("选择 PART_NUMBER 列", [None] + df.columns.tolist(), index=(get_default_index("PART_NUMBER") + 1 if "PART_NUMBER" in df.columns else 0))
-    pn2desc_col = st.selectbox("选择 PN2DESCRIPTION.ktext - 探头型号 列", [None] + df.columns.tolist(), index=(get_default_index("PN2DESCRIPTION.ktext") + 1 if "PN2DESCRIPTION.ktext" in df.columns else 0))
+    pn2desc_col = st.selectbox("选择 PN2MEASURE_NAME.ktext - 探头型号 列", [None] + df.columns.tolist(), index=(get_default_index("PN2MEASURE_NAME.ktext") + 1 if "PN2MEASURE_NAME.ktext" in df.columns else 0))
 
     # 仅保留 SFC 列非空的数据
     df = df.dropna(subset=[sfc_col])
@@ -70,7 +70,7 @@ if uploaded_file:
     else:
         part_number_df = pd.DataFrame()
     
-    # 处理 PN2DESCRIPTION.ktext
+    # 处理 PN2MEASURE_NAME.ktext
     if pn2desc_col:
         pn2desc_df = df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[pn2desc_col].first().reset_index()
     else:
