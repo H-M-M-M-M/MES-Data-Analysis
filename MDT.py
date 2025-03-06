@@ -9,8 +9,8 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
     # 数据预览
-    st.write("### 原始数据预览")
-    st.dataframe(df.head())
+    #st.write("### 原始数据预览")
+    #st.dataframe(df.head())
 
     # 显示列名供用户选择
     st.write("### 可用列名")
