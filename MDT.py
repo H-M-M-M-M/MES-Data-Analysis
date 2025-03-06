@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.title("MES BI下载后的数据弄成你熟悉的样子")
+st.title("MES BI下载后的数据弄成你熟悉的表格")
 
 uploaded_file = st.file_uploader("上传 Excel 文件", type=["xlsx"])
 
@@ -44,8 +44,13 @@ if uploaded_file:
     # 计算 MEASURE_STATUS
     if status_col:
         status_df = df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[status_col].apply(lambda x: "FAIL" if "FAIL" in x.values else "PASS").reset_index()
+        
+        # 查找 SFC 下的 FAIL 项，并提取所有 FAIL 子项
+        fail_items_df = df[df[status_col] == "FAIL"]
+        fail_items_df = fail_items_df.groupby([sfc_col, resource_col])[desc_col].apply(lambda x: ", ".join(x.unique())).reset_index(name="Fail_Items")
     else:
         status_df = pd.DataFrame()
+        fail_items_df = pd.DataFrame()
     
     # 处理 TEST_DATE_TIME，拆分为 Date 和 Time 两列
     if date_col:
@@ -70,7 +75,7 @@ if uploaded_file:
     
     # 合并数据
     final_df = pivot_df
-    for df_part in [status_df, date_df, part_number_df, pn2desc_df]:
+    for df_part in [status_df, date_df, part_number_df, pn2desc_df, fail_items_df]:
         if not df_part.empty:
             final_df = final_df.merge(df_part, on=[sfc_col, resource_col] if resource_col else [sfc_col], how='left')
 
