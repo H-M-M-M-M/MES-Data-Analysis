@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.title("Excel 数据处理工具")
+st.title("MES BI下载后的数据弄成你熟悉的样子")
 
 uploaded_file = st.file_uploader("上传 Excel 文件", type=["xlsx"])
 
