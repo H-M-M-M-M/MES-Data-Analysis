@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.title("MES BI下载后的数据弄成你熟悉的表格")
+st.title("🍧MES BI下载后的数据弄成你熟悉的样子( •̀ ω •́ )✧")
 
 uploaded_file = st.file_uploader("上传 Excel 文件", type=["xlsx"])
 
@@ -12,8 +12,9 @@ if uploaded_file:
     st.write("### 原始数据预览")
     st.dataframe(df.head())
 
-    # 确保时间格式正确
-    df["TEST_DATE_TIME"] = pd.to_datetime(df["TEST_DATE_TIME"], errors='coerce')
+    # 显示列名供用户选择
+    st.write("### 可用列名")
+    st.write(df.columns)
 
     # 让用户自定义列映射
     def get_default_index(col_name):
@@ -22,7 +23,7 @@ if uploaded_file:
     sfc_col = st.selectbox("选择 SFC 列-SN", df.columns, index=get_default_index("SFC"))
     desc_col = st.selectbox("选择 DESCRIPTION - Test Items列", [None] + df.columns.tolist(), index=(get_default_index("DESCRIPTION") + 1 if "DESCRIPTION" in df.columns else 0))
     actual_col = st.selectbox("选择 ACTUAL - 值 列", [None] + df.columns.tolist(), index=(get_default_index("ACTUAL") + 1 if "ACTUAL" in df.columns else 0))
-    status_col = st.selectbox("选择 MEASURE_STATUS - PASS|FAIL 列", [None] + df.columns.tolist(), index=(get_default_index("MEASURE_STATUS") + 1 if "MEASURE_STATUS" in df.columns else 0))
+    status_col = st.selectbox("选择 MEASURE_STATUS - PASS|FAIL😊 列", [None] + df.columns.tolist(), index=(get_default_index("MEASURE_STATUS") + 1 if "MEASURE_STATUS" in df.columns else 0))
     resource_col = st.selectbox("选择 RESOURCE - Station 列", [None] + df.columns.tolist(), index=(get_default_index("RESOURCE") + 1 if "RESOURCE" in df.columns else 0))
     date_col = st.selectbox("选择 TEST_DATE_TIME 列", [None] + df.columns.tolist(), index=(get_default_index("TEST_DATE_TIME") + 1 if "TEST_DATE_TIME" in df.columns else 0))
     part_number_col = st.selectbox("选择 PART_NUMBER 列", [None] + df.columns.tolist(), index=(get_default_index("PART_NUMBER") + 1 if "PART_NUMBER" in df.columns else 0))
@@ -54,6 +55,8 @@ if uploaded_file:
     
     # 处理 TEST_DATE_TIME，拆分为 Date 和 Time 两列
     if date_col:
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')  # 转换为 datetime 类型，并处理无效日期
+    #拆分    
         date_df = df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[date_col].min().reset_index()
         date_df["Date"] = date_df[date_col].dt.date
         date_df["Time"] = date_df[date_col].dt.time
