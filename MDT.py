@@ -27,6 +27,7 @@ if uploaded_file:
     resource_col = st.selectbox("选择 RESOURCE - Station 列", [None] + df.columns.tolist(), index=(get_default_index("RESOURCE") + 1 if "RESOURCE" in df.columns else 0))
     date_col = st.selectbox("选择 TEST_DATE_TIME 列", [None] + df.columns.tolist(), index=(get_default_index("TEST_DATE_TIME") + 1 if "TEST_DATE_TIME" in df.columns else 0))
     part_number_col = st.selectbox("选择 PART_NUMBER 列", [None] + df.columns.tolist(), index=(get_default_index("PART_NUMBER") + 1 if "PART_NUMBER" in df.columns else 0))
+    operation_col = st.selectbox("选择 OPERATION 列", [None] + df.columns.tolist(), index=(get_default_index("OPERATION") + 1 if "OPERATION" in df.columns else 0))
     pn2desc_col = st.selectbox("选择 PN2DESCRIPTION.ktext - 探头型号 列", [None] + df.columns.tolist(), index=(get_default_index("PN2DESCRIPTION.ktext") + 1 if "PN2DESCRIPTION.ktext" in df.columns else 0))
 
     # 仅保留 SFC 列非空的数据
@@ -69,6 +70,12 @@ if uploaded_file:
         part_number_df = df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[part_number_col].first().reset_index()
     else:
         part_number_df = pd.DataFrame()
+        
+    # 处理 OPERATION
+    if operation_col:
+        operation_df = df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[operation_col].first().reset_index()
+    else:
+        operation_df = pd.DataFrame()
     
     # 处理 PN2DESCRIPTION.ktext
     if pn2desc_col:
@@ -78,7 +85,7 @@ if uploaded_file:
     
     # 合并数据
     final_df = pivot_df
-    for df_part in [status_df, date_df, part_number_df, pn2desc_df, fail_items_df]:
+    for df_part in [status_df, date_df, part_number_df, operation_df, pn2desc_df, fail_items_df]:
         if not df_part.empty:
             final_df = final_df.merge(df_part, on=[sfc_col, resource_col] if resource_col else [sfc_col], how='left')
 
