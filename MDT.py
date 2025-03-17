@@ -34,7 +34,8 @@ if uploaded_file:
         filtered_df = df[selected_columns] if selected_columns else df[[sfc_col]]
 
         if date_col:
-            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+            # Convert to datetime, coercing errors
+            filtered_df[date_col] = pd.to_datetime(filtered_df[date_col], errors='coerce')
 
         output_path = "output.xlsx"
         with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
@@ -43,7 +44,7 @@ if uploaded_file:
             for operation, group_df in grouped:
                 pivot_index = [sfc_col] + ([resource_col] if resource_col else [])
                 pivot_df = group_df.pivot_table(index=pivot_index, columns=[desc_col] if desc_col else None, values=actual_col, aggfunc="first").reset_index() if desc_col and actual_col else group_df[pivot_index]
-                
+
                 # 计算 MEASURE_STATUS
                 if status_col:
                     status_df = group_df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[status_col].apply(lambda x: "FAIL" if "FAIL" in x.values else "PASS").reset_index()
@@ -64,6 +65,7 @@ if uploaded_file:
                 # Add additional data like Date, Part Number, etc.
                 additional_data = {}
                 if date_col:
+                    # Ensure to use the datetime attributes
                     additional_data['Date'] = group_df.groupby(pivot_index)[date_col].min().dt.date
                     additional_data['Time'] = group_df.groupby(pivot_index)[date_col].min().dt.time
                 if part_number_col:
@@ -72,6 +74,8 @@ if uploaded_file:
                     additional_data[pn2desc_col] = group_df.groupby(pivot_index)[pn2desc_col].first()
 
                 additional_df = pd.DataFrame(additional_data).reset_index()
+
+                # Merge and write the result to Excel
                 pivot_df = pivot_df.merge(additional_df, on=pivot_index, how='left')
 
                 # Write the result to Excel
