@@ -15,6 +15,7 @@ if uploaded_file:
     def get_default_index(col_name):
         return df.columns.tolist().index(col_name) if col_name in df.columns else 0
 
+    # 字段选择
     sfc_col = st.selectbox("选择 SFC 列-SN", df.columns, index=get_default_index("SFC"))
     desc_col = st.selectbox("选择 MEASURE_NAME - Test Items列", [None] + df.columns.tolist(), index=(get_default_index("MEASURE_NAME") + 1 if "MEASURE_NAME" in df.columns else 0))
     actual_col = st.selectbox("选择 ACTUAL - 值 列", [None] + df.columns.tolist(), index=(get_default_index("ACTUAL") + 1 if "ACTUAL" in df.columns else 0))
@@ -29,56 +30,69 @@ if uploaded_file:
         st.error("请先选择 OPERATION 列")
     else:
         df = df.dropna(subset=[sfc_col])
-
         selected_columns = [col for col in [sfc_col, desc_col, actual_col, status_col, resource_col, date_col, part_number_col, operation_col, pn2desc_col] if col is not None]
         filtered_df = df[selected_columns] if selected_columns else df[[sfc_col]]
 
+        # 添加 Date 和 Time 列
+        filtered_df = filtered_df.copy()
         if date_col:
-            # Convert to datetime, coercing errors
             filtered_df[date_col] = pd.to_datetime(filtered_df[date_col], errors='coerce')
+            filtered_df["Date"] = filtered_df[date_col].dt.date
+            filtered_df["Time"] = filtered_df[date_col].dt.time
+        else:
+            filtered_df["Date"] = pd.NaT
+            filtered_df["Time"] = pd.NaT
 
         output_path = "output.xlsx"
         with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
             grouped = filtered_df.groupby(operation_col)
-            
-            for operation, group_df in grouped:
-                pivot_index = [sfc_col] + ([resource_col] if resource_col else [])
-                pivot_df = group_df.pivot_table(index=pivot_index, columns=[desc_col] if desc_col else None, values=actual_col, aggfunc="first").reset_index() if desc_col and actual_col else group_df[pivot_index]
 
-                # 计算 MEASURE_STATUS
+            for operation, group_df in grouped:
+                # 新的唯一键包括 SFC + RESOURCE + Date + Time
+                pivot_index = [sfc_col] + ([resource_col] if resource_col else []) + ["Date", "Time"]
+
+                # 透视表
+                if desc_col and actual_col:
+                    pivot_df = group_df.pivot_table(
+                        index=pivot_index,
+                        columns=[desc_col],
+                        values=actual_col,
+                        aggfunc="first"
+                    ).reset_index()
+                else:
+                    pivot_df = group_df[pivot_index].drop_duplicates()
+
+                # 状态 PASS/FAIL
                 if status_col:
-                    status_df = group_df.groupby([sfc_col, resource_col] if resource_col else [sfc_col])[status_col].apply(lambda x: "FAIL" if "FAIL" in x.values else "PASS").reset_index()
-                    
-                    # 查找 SFC 下的 FAIL 项，并提取所有 FAIL 子项
+                    status_df = group_df.groupby(pivot_index)[status_col].apply(
+                        lambda x: "FAIL" if "FAIL" in x.values else "PASS"
+                    ).reset_index()
+
                     fail_items_df = group_df[group_df[status_col] == "FAIL"]
-                    fail_items_df = fail_items_df.groupby([sfc_col, resource_col])[desc_col].apply(lambda x: ", ".join(x.unique())).reset_index(name="Fail_Items")
+                    fail_items_df = fail_items_df.groupby(pivot_index)[desc_col].apply(
+                        lambda x: ", ".join(x.unique())
+                    ).reset_index(name="Fail_Items")
                 else:
                     status_df = pd.DataFrame()
                     fail_items_df = pd.DataFrame()
 
-                # Merge status and fail items data with the pivoted data
+                # 合并状态与 Fail 信息
                 if not status_df.empty:
-                    pivot_df = pivot_df.merge(status_df, on=[sfc_col, resource_col], how='left')
+                    pivot_df = pivot_df.merge(status_df, on=pivot_index, how='left')
                 if not fail_items_df.empty:
-                    pivot_df = pivot_df.merge(fail_items_df, on=[sfc_col, resource_col], how='left')
+                    pivot_df = pivot_df.merge(fail_items_df, on=pivot_index, how='left')
 
-                # Add additional data like Date, Part Number, etc.
+                # 附加信息（Part Number, 型号等）
                 additional_data = {}
-                if date_col:
-                    # Ensure to use the datetime attributes
-                    additional_data['Date'] = group_df.groupby(pivot_index)[date_col].min().dt.date
-                    additional_data['Time'] = group_df.groupby(pivot_index)[date_col].min().dt.time
                 if part_number_col:
                     additional_data[part_number_col] = group_df.groupby(pivot_index)[part_number_col].first()
                 if pn2desc_col:
                     additional_data[pn2desc_col] = group_df.groupby(pivot_index)[pn2desc_col].first()
 
                 additional_df = pd.DataFrame(additional_data).reset_index()
-
-                # Merge and write the result to Excel
                 pivot_df = pivot_df.merge(additional_df, on=pivot_index, how='left')
 
-                # Write the result to Excel
+                # 写入 Excel
                 pivot_df.to_excel(writer, sheet_name=str(operation)[:31], index=False)
 
         with open(output_path, "rb") as file:
